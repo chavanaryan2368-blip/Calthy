@@ -2,24 +2,28 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { SYSTEM_INSTRUCTION, MEAL_ANALYSIS_SCHEMA, MealAnalysis, DIET_PLAN_SCHEMA, DietPlan, ASSISTANT_SYSTEM_INSTRUCTION } from "../constants";
 
 export class GeminiService {
-  private ai: GoogleGenAI;
+  private ai: GoogleGenAI | null = null;
 
-  constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is missing");
+  private getAI(): GoogleGenAI {
+    if (!this.ai) {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("GEMINI_API_KEY is missing. Please add it to your environment variables.");
+      }
+      this.ai = new GoogleGenAI({ apiKey });
     }
-    this.ai = new GoogleGenAI({ apiKey });
+    return this.ai;
   }
 
   async analyzeMeal(input: string | { data: string; mimeType: string }): Promise<MealAnalysis> {
+    const ai = this.getAI();
     const isImage = typeof input !== 'string';
     
     const parts = isImage 
       ? [{ inlineData: input }, { text: "Analyze this Indian meal." }]
       : [{ text: `Analyze this Indian meal: ${input}` }];
 
-    const response = await this.ai.models.generateContent({
+    const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: { parts },
       config: {
@@ -36,12 +40,13 @@ export class GeminiService {
   }
 
   async generateDietPlan(profile: any, environment: any): Promise<DietPlan> {
+    const ai = this.getAI();
     const prompt = `Create a daily diet plan for:
     Age: ${profile.age}, Weight: ${profile.weight}kg, Height: ${profile.height}cm, Goal: ${profile.goal}.
     Climate: ${environment.climate}, Season: ${environment.season}.
     Include estimated costs for each meal in INR.`;
 
-    const response = await this.ai.models.generateContent({
+    const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
@@ -55,7 +60,8 @@ export class GeminiService {
   }
 
   async chatWithAssistant(message: string, history: any[]): Promise<string> {
-    const response = await this.ai.models.generateContent({
+    const ai = this.getAI();
+    const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: message,
       config: {
@@ -66,7 +72,8 @@ export class GeminiService {
   }
 
   async textToSpeech(text: string): Promise<string> {
-    const response = await this.ai.models.generateContent({
+    const ai = this.getAI();
+    const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text }] }],
       config: {
