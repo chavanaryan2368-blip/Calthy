@@ -2,7 +2,58 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleMap, Polyline, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { Play, Pause, Square, Clock, Activity, Zap, Footprints, AlertCircle } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 const containerStyle = {
   width: '100%',
@@ -178,7 +229,7 @@ export default function RunTracker({ userWeight, uid, onActivitySaved }: { userW
   };
 
   const handleStop = async () => {
-    if (distance < 0.01) { // Don't save very short runs
+    if (distance < 0.001) { // Lowered for easier testing (1 meter)
         setIsTracking(false);
         setIsPaused(false);
         setPath([]);
@@ -188,21 +239,30 @@ export default function RunTracker({ userWeight, uid, onActivitySaved }: { userW
         return;
     }
 
+    if (!uid) {
+      console.error("Cannot save activity: User ID is missing.");
+      return;
+    }
+
     const calories = distance * userWeight * 1.036;
     const activity = {
         type: 'run',
-        distance,
-        time: elapsedTime,
-        calories,
+        distance: Number(distance.toFixed(4)),
+        time: Math.floor(elapsedTime),
+        calories: Number(calories.toFixed(2)),
         timestamp: Date.now(),
         uid,
         path: path // Save the path coordinates
     };
     
+    console.log("Attempting to save activity:", activity);
+    
     try {
-      await addDoc(collection(db, 'users', uid, 'activities'), activity);
+      const docRef = await addDoc(collection(db, 'users', uid, 'activities'), activity);
+      console.log("Activity saved successfully with ID:", docRef.id);
     } catch (error) {
       console.error("Error saving activity:", error);
+      handleFirestoreError(error, OperationType.CREATE, `users/${uid}/activities`);
     }
     
     if (onActivitySaved) onActivitySaved();

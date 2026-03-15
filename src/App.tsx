@@ -2096,10 +2096,16 @@ export default function App() {
                 <h2 className="text-2xl md:text-3xl font-black">run tracker 👟</h2>
                 <p className="text-xs md:text-sm text-text-muted font-medium">track your activities like a pro</p>
               </div>
-              <RunTracker 
-                userWeight={user?.weight || 70} 
-                uid={firebaseUser?.uid || ''}
-              />
+              <ErrorBoundary>
+                <RunTracker 
+                  userWeight={user?.weight || 70} 
+                  uid={firebaseUser?.uid || ''}
+                  onActivitySaved={() => {
+                    setNotification({ message: 'Run activity saved successfully!', type: 'success' });
+                    setTimeout(() => setNotification(null), 3000);
+                  }}
+                />
+              </ErrorBoundary>
 
               {/* Run History */}
               <div className="mt-8 space-y-4 pb-20">

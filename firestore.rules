@@ -111,11 +111,13 @@ service cloud.firestore {
     }
 
     function isValidActivity(data) {
-      return hasOnlyAllowedFields(['id', 'timestamp', 'type', 'duration', 'caloriesBurned', 'uid']) &&
+      return hasOnlyAllowedFields(['id', 'timestamp', 'type', 'distance', 'time', 'calories', 'uid', 'path']) &&
              data.timestamp is number &&
              data.type is string && data.type.size() >= 1 &&
-             data.duration is number && data.duration > 0 &&
-             data.caloriesBurned is number && data.caloriesBurned >= 0 &&
+             data.distance is number && data.distance >= 0 &&
+             data.time is number && data.time >= 0 &&
+             data.calories is number && data.calories >= 0 &&
+             (!('path' in data) || data.path is list) &&
              data.uid == request.auth.uid;
     }
 

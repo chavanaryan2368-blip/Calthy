@@ -41,11 +41,22 @@
         "id": { "type": "string" },
         "timestamp": { "type": "number" },
         "type": { "type": "string" },
-        "duration": { "type": "number", "description": "Duration in minutes" },
-        "caloriesBurned": { "type": "number" },
-        "uid": { "type": "string" }
+        "distance": { "type": "number", "description": "Distance in km" },
+        "time": { "type": "number", "description": "Time in seconds" },
+        "calories": { "type": "number" },
+        "uid": { "type": "string" },
+        "path": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number" },
+              "lng": { "type": "number" }
+            }
+          }
+        }
       },
-      "required": ["timestamp", "type", "duration", "caloriesBurned", "uid"]
+      "required": ["timestamp", "type", "distance", "time", "calories", "uid"]
     },
     "Fasting": {
       "title": "Fasting Session",
