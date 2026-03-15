@@ -1278,21 +1278,21 @@ export default function App() {
       <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand-primary/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Header */}
-      <header className="p-4 md:p-6 flex items-center justify-between sticky top-0 bg-bg-main/80 backdrop-blur-xl z-20 border-b border-border-main">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center rotate-6 shadow-[0_0_15px_rgba(204,255,0,0.2)]">
-            <Zap className="w-6 h-6 text-black fill-current" />
+      <header className="px-4 py-3 md:px-6 md:py-4 flex items-center justify-between sticky top-0 bg-bg-main/80 backdrop-blur-xl z-20 border-b border-border-main">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <div className="w-9 h-9 md:w-10 md:h-10 bg-brand-primary rounded-xl flex items-center justify-center rotate-6 shadow-[0_0_15px_rgba(204,255,0,0.2)] shrink-0">
+            <Zap className="w-5 h-5 md:w-6 md:h-6 text-black fill-current" />
           </div>
-          <div>
-            <h1 className="text-xl font-black tracking-tighter">Calthy<span className="text-brand-primary">.</span></h1>
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Hey, {user?.name.split(' ')[0]} 👋</p>
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-xl font-black tracking-tighter truncate">Calthy<span className="text-brand-primary">.</span></h1>
+            <p className="text-[9px] md:text-[10px] text-text-muted font-bold uppercase tracking-widest truncate">Hey, {user?.name.split(' ')[0]} 👋</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
           <button 
             onClick={() => setActiveTab('chat')}
             className={cn(
-              "p-3 rounded-2xl transition-colors",
+              "p-2.5 md:p-3 rounded-2xl transition-colors",
               activeTab === 'chat' ? "bg-brand-primary text-black" : "bg-glass-bg hover:bg-white/10 text-text-main"
             )}
           >
@@ -1301,7 +1301,7 @@ export default function App() {
           {activeTab === 'home' && (
             <button 
               onClick={() => setActiveTab('stats')}
-              className="p-3 rounded-2xl bg-glass-bg hover:bg-white/10 transition-colors"
+              className="p-2.5 md:p-3 rounded-2xl bg-glass-bg hover:bg-white/10 transition-colors"
             >
               <History className="w-5 h-5 text-text-main" />
             </button>
@@ -1309,16 +1309,16 @@ export default function App() {
           {activeTab === 'stats' && (
             <button 
               onClick={() => setActiveTab('home')}
-              className="p-3 rounded-2xl bg-glass-bg hover:bg-white/10 transition-colors"
+              className="p-2.5 md:p-3 rounded-2xl bg-glass-bg hover:bg-white/10 transition-colors"
             >
               <ArrowLeft className="w-5 h-5 text-text-main" />
             </button>
           )}
           <button 
             onClick={handleLogout}
-            className="p-3 rounded-2xl bg-glass-bg hover:bg-red-500/20 group transition-colors"
+            className="p-2.5 md:p-3 rounded-2xl bg-glass-bg hover:bg-red-500/20 group transition-colors"
           >
-            <LogOut className="w-5 h-5 text-text-main group-hover:text-red-400" />
+            <LogOut className="w-5 h-5 text-text-main group-hover:text-red-500" />
           </button>
         </div>
       </header>
@@ -2263,8 +2263,8 @@ export default function App() {
       </main>
 
       {/* Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-bg-main/80 backdrop-blur-2xl border-t border-border-main px-4 py-3 pb-8 z-40">
-        <div className="max-w-md mx-auto flex justify-between items-center">
+      <nav className="fixed bottom-0 left-0 right-0 bg-bg-main/80 backdrop-blur-2xl border-t border-border-main px-2 py-2 pb-6 z-40">
+        <div className="max-w-md mx-auto grid grid-cols-5 items-center">
           {[
             { id: 'home', icon: Home, label: 'Home' },
             { id: 'run', icon: Footprints, label: 'Run' },
@@ -2276,27 +2276,30 @@ export default function App() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as MainView)}
               className={cn(
-                "flex flex-col items-center gap-1 transition-all relative",
+                "flex flex-col items-center justify-center gap-1 transition-all relative w-full h-full py-1",
                 activeTab === tab.id ? "text-brand-primary" : "text-text-muted hover:text-text-main"
               )}
             >
               {tab.isSpecial ? (
                 <div className={cn(
-                  "w-11 h-11 rounded-xl flex items-center justify-center transition-all",
+                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
                   activeTab === tab.id 
                     ? "bg-brand-primary text-black shadow-[0_0_20px_rgba(204,255,0,0.4)]" 
                     : "bg-glass-bg text-text-main border border-border-main"
                 )}>
-                  <Plus className={cn("w-5 h-5", activeTab === tab.id && "rotate-90 transition-transform")} />
+                  <Plus className={cn("w-6 h-6", activeTab === tab.id && "rotate-90 transition-transform")} />
                 </div>
               ) : (
                 <>
-                  <tab.icon className={cn("w-6 h-6", activeTab === tab.id && "fill-current")} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
+                  <tab.icon className={cn("w-5 h-5", activeTab === tab.id && "fill-current")} />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-center">{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <motion.div 
+                      layoutId="nav-indicator" 
+                      className="absolute -bottom-1 w-1 h-1 bg-brand-primary rounded-full" 
+                    />
+                  )}
                 </>
-              )}
-              {activeTab === tab.id && !tab.isSpecial && (
-                <motion.div layoutId="nav-indicator" className="w-1 h-1 bg-brand-primary rounded-full mt-1" />
               )}
             </button>
           ))}
