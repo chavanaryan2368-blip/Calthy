@@ -34,6 +34,7 @@ import {
   Mic,
   MicOff,
   Volume2,
+  VolumeX,
   Settings,
   Thermometer,
   CloudSun,
@@ -276,8 +277,10 @@ export default function App() {
   // AI Chat State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatting, setIsChatting] = useState(false);
+  const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   // Diet Plan State
   const [dietPlan, setDietPlan] = useState<DietPlan | null>(null);
@@ -459,9 +462,16 @@ export default function App() {
 
   const sendNotification = (title: string, body: string) => {
     if (!("Notification" in window)) return;
+    
     if (Notification.permission === "granted") {
       try {
         new Notification(title, { body, icon: '/favicon.ico' });
+        
+        // Play sound if not muted
+        if (!isMuted) {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.play().catch(e => console.error("Audio play failed:", e));
+        }
       } catch (e) {
         console.error("Notification error:", e);
       }
@@ -515,6 +525,15 @@ export default function App() {
 
   // Notification logic
   useEffect(() => {
+    const syncPermission = () => {
+      if (typeof window !== 'undefined' && "Notification" in window) {
+        setNotificationPermission(Notification.permission);
+      }
+    };
+
+    window.addEventListener('focus', syncPermission);
+    const permInterval = setInterval(syncPermission, 2000); // Check every 2 seconds to be responsive
+
     if (typeof window === 'undefined' || !("Notification" in window)) return;
     
     if (Notification.permission === "default") {
@@ -540,8 +559,12 @@ export default function App() {
     };
 
     const interval = setInterval(checkReminders, 10000); // Check every 10 seconds for better accuracy
-    return () => clearInterval(interval);
-  }, [reminders, notificationPermission]);
+    return () => {
+      window.removeEventListener('focus', syncPermission);
+      clearInterval(permInterval);
+      clearInterval(interval);
+    };
+  }, [reminders, notificationPermission, isMuted]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -775,9 +798,13 @@ export default function App() {
       const response = await geminiService.chatWithAssistant(text, chatMessages);
       const assistantMsg: ChatMessage = { role: 'assistant', content: response };
       setChatMessages(prev => [...prev, assistantMsg]);
+      setIsChatting(false); // Stop text loading spinner as soon as text is here
       
       // Auto-speak the response
+      setIsGeneratingVoice(true);
       const audioData = await geminiService.textToSpeech(response);
+      setIsGeneratingVoice(false);
+      
       if (audioData) {
         const playback = await playPcmBase64(audioData);
         if (playback) {
@@ -788,8 +815,8 @@ export default function App() {
       }
     } catch (error) {
       console.error("Chat failed:", error);
-    } finally {
       setIsChatting(false);
+      setIsGeneratingVoice(false);
     }
   };
 
@@ -2078,6 +2105,12 @@ export default function App() {
                     <div className="w-1.5 h-1.5 bg-text-muted rounded-full animate-bounce [animation-delay:0.4s]" />
                   </div>
                 )}
+                {isGeneratingVoice && (
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-primary animate-pulse ml-4">
+                    <Volume2 className="w-3 h-3" />
+                    Generating Voice...
+                  </div>
+                )}
               </div>
 
               <div className="relative mt-auto pb-4 flex items-center gap-2">
@@ -2319,7 +2352,7 @@ export default function App() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              className="bg-bg-surface w-full max-w-md rounded-t-[2rem] md:rounded-t-[3rem] sm:rounded-[3rem] p-6 md:p-8 space-y-8 overflow-hidden border-t border-border-main"
+              className="bg-bg-surface w-full max-w-md rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 space-y-8 overflow-hidden border border-border-main shadow-2xl"
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl md:text-3xl font-black">Edit Profile<span className="text-brand-primary">.</span></h2>
@@ -2400,7 +2433,7 @@ export default function App() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              className="bg-bg-surface w-full max-w-md rounded-t-[2rem] md:rounded-t-[3rem] sm:rounded-[3rem] p-6 md:p-8 space-y-6 overflow-y-auto max-h-[90vh] no-scrollbar border-t border-border-main"
+              className="bg-bg-surface w-full max-w-md rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 space-y-6 overflow-y-auto max-h-[90vh] no-scrollbar border border-border-main shadow-2xl"
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-xl md:text-2xl font-black">Meal Details<span className="text-brand-primary">.</span></h2>
@@ -2491,17 +2524,20 @@ export default function App() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              className="bg-bg-surface w-full max-w-md rounded-t-[2rem] md:rounded-t-[3rem] sm:rounded-[3rem] p-6 md:p-8 space-y-6 border-t border-border-main"
+              className="bg-bg-surface w-full max-w-md rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 space-y-6 border border-border-main shadow-2xl"
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-black">Reminders 🔔</h2>
                 <div className="flex gap-2">
                   <button 
-                    onClick={() => sendNotification("Test Notification 🔔", "If you see this, reminders are working!")}
-                    className="p-3 bg-glass-bg hover:bg-white/10 rounded-full transition-colors"
-                    title="Test Notification"
+                    onClick={() => setIsMuted(!isMuted)}
+                    className={cn(
+                      "p-3 rounded-full transition-colors",
+                      isMuted ? "bg-red-500/10 text-red-500" : "bg-brand-primary/10 text-brand-primary"
+                    )}
+                    title={isMuted ? "Unmute Notifications" : "Mute Notifications"}
                   >
-                    <Volume2 className="w-5 h-5 text-brand-primary" />
+                    {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                   </button>
                   <button 
                     onClick={() => setShowRemindersModal(false)}
@@ -2595,7 +2631,7 @@ export default function App() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              className="bg-bg-surface w-full max-w-md rounded-t-[2rem] md:rounded-t-[3rem] sm:rounded-[3rem] p-6 md:p-8 space-y-6 border-t border-border-main"
+              className="bg-bg-surface w-full max-w-md rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 space-y-6 border border-border-main shadow-2xl"
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-black">About Calthy 🥗</h2>
