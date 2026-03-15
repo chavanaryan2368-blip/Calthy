@@ -1,0 +1,5 @@
+{
+  "name": "Calthy",
+  "description": "The ultimate AI calorie tracker for the Gen-Z lifestyle. Snap, log, and stay healthy with Calthy.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}

@@ -1,0 +1,193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{userId}
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - email: string (required, valid email)
+    //   - age: number (required, 0-120)
+    //   - weight: number (required, 0-500)
+    //   - height: number (required, 0-300)
+    //   - goal: string (required, enum: ['loss', 'gain', 'maintain'])
+    //   - role: string (optional, enum: ['user', 'admin'])
+    //
+    // Collection: /users/{userId}/meals/{mealId}
+    // Fields:
+    //   - timestamp: number (required)
+    //   - name: string (required, 1-200 chars)
+    //   - calories: number (required, >= 0)
+    //   - protein: number (required, >= 0)
+    //   - carbs: number (required, >= 0)
+    //   - fat: number (required, >= 0)
+    //   - mealType: string (required, enum: ['Breakfast', 'Lunch', 'Dinner', 'Snack'])
+    //   - image: string (optional, base64 or url)
+    //   - uid: string (required, matches owner)
+    //
+    // Collection: /users/{userId}/activities/{activityId}
+    // Fields:
+    //   - timestamp: number (required)
+    //   - type: string (required)
+    //   - duration: number (required, > 0)
+    //   - caloriesBurned: number (required, >= 0)
+    //   - uid: string (required, matches owner)
+    //
+    // Collection: /users/{userId}/fasting/current
+    // Fields:
+    //   - startTime: number (required)
+    //   - duration: number (required, 1-72)
+    //   - isActive: bool (required)
+    //
+    // Collection: /users/{userId}/reminders/{reminderId}
+    // Fields:
+    //   - label: string (required)
+    //   - time: string (required, HH:mm format)
+    //   - enabled: bool (required)
+    //
+    // Collection: /users/{userId}/favorites/{favoriteId}
+    // Fields:
+    //   - foodId: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "justuse91111@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUserProfile(data) {
+      return hasOnlyAllowedFields(['name', 'email', 'age', 'weight', 'height', 'goal', 'role']) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             isValidEmail(data.email) &&
+             data.age is number && data.age >= 0 && data.age <= 120 &&
+             data.weight is number && data.weight >= 0 && data.weight <= 500 &&
+             data.height is number && data.height >= 0 && data.height <= 300 &&
+             data.goal in ['loss', 'gain', 'maintain'];
+    }
+
+    function isValidMeal(data) {
+      return hasOnlyAllowedFields(['id', 'timestamp', 'mealName', 'calories', 'protein', 'carbs', 'fats', 'fiber', 'healthRating', 'advice', 'ingredients', 'mealType', 'image', 'uid']) &&
+             data.timestamp is number &&
+             data.mealName is string && data.mealName.size() >= 1 && data.mealName.size() <= 200 &&
+             data.calories is number && data.calories >= 0 &&
+             data.protein is number && data.protein >= 0 &&
+             data.carbs is number && data.carbs >= 0 &&
+             data.fats is number && data.fats >= 0 &&
+             (!('fiber' in data) || data.fiber is number) &&
+             (!('healthRating' in data) || data.healthRating is number) &&
+             (!('advice' in data) || data.advice is string) &&
+             (!('ingredients' in data) || data.ingredients is list) &&
+             data.mealType in ['Breakfast', 'Lunch', 'Dinner', 'Snack'] &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidActivity(data) {
+      return hasOnlyAllowedFields(['id', 'timestamp', 'type', 'duration', 'caloriesBurned', 'uid']) &&
+             data.timestamp is number &&
+             data.type is string && data.type.size() >= 1 &&
+             data.duration is number && data.duration > 0 &&
+             data.caloriesBurned is number && data.caloriesBurned >= 0 &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidFasting(data) {
+      return hasOnlyAllowedFields(['startTime', 'duration', 'isActive']) &&
+             data.startTime is number &&
+             data.duration is number && data.duration >= 1 && data.duration <= 72 &&
+             data.isActive is bool;
+    }
+
+    function isValidReminder(data) {
+      return hasOnlyAllowedFields(['id', 'label', 'time', 'enabled']) &&
+             (!('label' in data) || (data.label is string && data.label.size() >= 1)) &&
+             (!('time' in data) || (data.time is string && data.time.matches("^\\d{1,2}:\\d{2}$"))) &&
+             (!('enabled' in data) || (data.enabled is bool));
+    }
+
+    function isValidFavorite(data) {
+      return hasOnlyAllowedFields(['foodId']) &&
+             data.foodId is string && data.foodId.size() >= 1;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+
+      match /meals/{mealId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidMeal(request.resource.data);
+        allow update: if isOwner(userId) && isValidMeal(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /activities/{activityId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidActivity(request.resource.data);
+        allow update: if isOwner(userId) && isValidActivity(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /fasting/{docId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId) && isValidFasting(request.resource.data);
+      }
+
+      match /reminders/{reminderId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidReminder(request.resource.data);
+        allow update: if isOwner(userId) && isValidReminder(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /favorites/{favoriteId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidFavorite(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /dailyLogs/{date} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId) && hasOnlyAllowedFields(['waterIntake', 'waterGlasses', 'steps']);
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

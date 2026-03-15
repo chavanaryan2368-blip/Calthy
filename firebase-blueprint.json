@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User's health profile and goals",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "User's full name" },
+        "email": { "type": "string", "format": "email", "description": "User's email address" },
+        "age": { "type": "number", "description": "User's age" },
+        "weight": { "type": "number", "description": "User's weight in kg" },
+        "height": { "type": "number", "description": "User's height in cm" },
+        "goal": { "type": "string", "enum": ["loss", "gain", "maintain"], "description": "User's fitness goal" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User's role" }
+      },
+      "required": ["name", "email", "age", "weight", "height", "goal"]
+    },
+    "Meal": {
+      "title": "Meal",
+      "description": "A logged meal with nutritional info",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "number", "description": "Unix timestamp of the meal" },
+        "name": { "type": "string" },
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "carbs": { "type": "number" },
+        "fat": { "type": "number" },
+        "mealType": { "type": "string", "enum": ["Breakfast", "Lunch", "Dinner", "Snack"] },
+        "image": { "type": "string", "description": "Base64 or URL of the meal image" },
+        "uid": { "type": "string", "description": "Owner's UID" }
+      },
+      "required": ["timestamp", "name", "calories", "protein", "carbs", "fat", "mealType", "uid"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "A logged physical activity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "type": { "type": "string" },
+        "duration": { "type": "number", "description": "Duration in minutes" },
+        "caloriesBurned": { "type": "number" },
+        "uid": { "type": "string" }
+      },
+      "required": ["timestamp", "type", "duration", "caloriesBurned", "uid"]
+    },
+    "Fasting": {
+      "title": "Fasting Session",
+      "description": "Current fasting state",
+      "type": "object",
+      "properties": {
+        "startTime": { "type": "number" },
+        "duration": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["startTime", "duration", "isActive"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "User set reminder for meals or water",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "time": { "type": "string" },
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["label", "time", "enabled"]
+    },
+    "Favorite": {
+      "title": "Favorite Food",
+      "description": "A food item ID saved as favorite",
+      "type": "object",
+      "properties": {
+        "foodId": { "type": "string" }
+      },
+      "required": ["foodId"]
+    },
+    "DailyLog": {
+      "title": "Daily Log",
+      "description": "Daily aggregated stats",
+      "type": "object",
+      "properties": {
+        "waterIntake": { "type": "number" },
+        "waterGlasses": { "type": "number" },
+        "steps": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User's private profile"
+    },
+    "/users/{userId}/dailyLogs/{date}": {
+      "schema": "DailyLog",
+      "description": "User's daily aggregated stats"
+    },
+    "/users/{userId}/meals/{mealId}": {
+      "schema": "Meal",
+      "description": "User's logged meals"
+    },
+    "/users/{userId}/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "User's logged activities"
+    },
+    "/users/{userId}/fasting/current": {
+      "schema": "Fasting",
+      "description": "User's current fasting session"
+    },
+    "/users/{userId}/reminders/{reminderId}": {
+      "schema": "Reminder",
+      "description": "User's reminders"
+    },
+    "/users/{userId}/favorites/{favoriteId}": {
+      "schema": "Favorite",
+      "description": "User's favorite foods"
+    }
+  }
+}
