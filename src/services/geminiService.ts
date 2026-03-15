@@ -41,10 +41,19 @@ export class GeminiService {
 
   async generateDietPlan(profile: any, environment: any): Promise<DietPlan> {
     const ai = this.getAI();
-    const prompt = `Create a daily diet plan for:
+    const prompt = `Create a comprehensive daily Indian diet plan for:
     Age: ${profile.age}, Weight: ${profile.weight}kg, Height: ${profile.height}cm, Goal: ${profile.goal}.
     Climate: ${environment.climate}, Season: ${environment.season}.
-    Include estimated costs for each meal in INR.`;
+    
+    For each meal (breakfast, lunch, snacks, dinner), you MUST provide a full nutritional analysis object including:
+    - mealName
+    - ingredients (array of strings)
+    - calories, protein, carbs, fats, fiber (numbers)
+    - healthRating (1-10)
+    - advice (personalized dietician advice)
+    - cost (estimated cost in INR)
+    
+    Also provide a total daily cost and a rationale for the plan.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",

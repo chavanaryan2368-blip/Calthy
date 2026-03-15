@@ -10,6 +10,7 @@ export interface MealAnalysis {
   fiber: number;
   healthRating: number;
   advice: string;
+  cost?: string;
 }
 
 export const MEAL_ANALYSIS_SCHEMA = {
@@ -27,7 +28,8 @@ export const MEAL_ANALYSIS_SCHEMA = {
     fats: { type: Type.NUMBER, description: "Grams of fats" },
     fiber: { type: Type.NUMBER, description: "Grams of fiber" },
     healthRating: { type: Type.NUMBER, description: "Score from 1 to 10" },
-    advice: { type: Type.STRING, description: "Personalized dietician advice" }
+    advice: { type: Type.STRING, description: "Personalized dietician advice" },
+    cost: { type: Type.STRING, description: "Estimated cost in local currency" }
   },
   required: ["mealName", "ingredients", "calories", "protein", "carbs", "fats", "fiber", "healthRating", "advice"]
 };
@@ -44,10 +46,10 @@ If text, assume standard home-cooked portions unless specified.
 Return the response in the specified JSON format.`;
 
 export interface DietPlan {
-  breakfast: { dish: string; calories: number; cost: string };
-  lunch: { dish: string; calories: number; cost: string };
-  snacks: { dish: string; calories: number; cost: string };
-  dinner: { dish: string; calories: number; cost: string };
+  breakfast: MealAnalysis;
+  lunch: MealAnalysis;
+  snacks: MealAnalysis;
+  dinner: MealAnalysis;
   totalCost: string;
   rationale: string;
 }
@@ -55,10 +57,10 @@ export interface DietPlan {
 export const DIET_PLAN_SCHEMA = {
   type: Type.OBJECT,
   properties: {
-    breakfast: { type: Type.OBJECT, properties: { dish: { type: Type.STRING }, calories: { type: Type.NUMBER }, cost: { type: Type.STRING } } },
-    lunch: { type: Type.OBJECT, properties: { dish: { type: Type.STRING }, calories: { type: Type.NUMBER }, cost: { type: Type.STRING } } },
-    snacks: { type: Type.OBJECT, properties: { dish: { type: Type.STRING }, calories: { type: Type.NUMBER }, cost: { type: Type.STRING } } },
-    dinner: { type: Type.OBJECT, properties: { dish: { type: Type.STRING }, calories: { type: Type.NUMBER }, cost: { type: Type.STRING } } },
+    breakfast: MEAL_ANALYSIS_SCHEMA,
+    lunch: MEAL_ANALYSIS_SCHEMA,
+    snacks: MEAL_ANALYSIS_SCHEMA,
+    dinner: MEAL_ANALYSIS_SCHEMA,
     totalCost: { type: Type.STRING, description: "Estimated total daily cost in local currency" },
     rationale: { type: Type.STRING, description: "Why this plan fits the user's profile and environment" }
   },

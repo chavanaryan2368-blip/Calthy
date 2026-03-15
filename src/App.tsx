@@ -230,6 +230,7 @@ interface ActivityLog {
   time: number;
   calories: number;
   timestamp: number;
+  path?: { lat: number; lng: number }[];
 }
 
 export default function App() {
@@ -1916,10 +1917,26 @@ export default function App() {
                   <div className="space-y-4">
                     <div className="glass-card p-6 rounded-[2rem] space-y-4 border-brand-secondary/20">
                       <div className="grid grid-cols-2 gap-4">
-                        <PlanItem label="Breakfast" dish={dietPlan.breakfast.dish} kcal={dietPlan.breakfast.calories} />
-                        <PlanItem label="Lunch" dish={dietPlan.lunch.dish} kcal={dietPlan.lunch.calories} />
-                        <PlanItem label="Snacks" dish={dietPlan.snacks.dish} kcal={dietPlan.snacks.calories} />
-                        <PlanItem label="Dinner" dish={dietPlan.dinner.dish} kcal={dietPlan.dinner.calories} />
+                        <PlanItem 
+                          label="Breakfast" 
+                          meal={dietPlan.breakfast} 
+                          onClick={() => setSelectedMeal({ ...dietPlan.breakfast, id: 'breakfast', timestamp: Date.now() })} 
+                        />
+                        <PlanItem 
+                          label="Lunch" 
+                          meal={dietPlan.lunch} 
+                          onClick={() => setSelectedMeal({ ...dietPlan.lunch, id: 'lunch', timestamp: Date.now() })} 
+                        />
+                        <PlanItem 
+                          label="Snacks" 
+                          meal={dietPlan.snacks} 
+                          onClick={() => setSelectedMeal({ ...dietPlan.snacks, id: 'snacks', timestamp: Date.now() })} 
+                        />
+                        <PlanItem 
+                          label="Dinner" 
+                          meal={dietPlan.dinner} 
+                          onClick={() => setSelectedMeal({ ...dietPlan.dinner, id: 'dinner', timestamp: Date.now() })} 
+                        />
                       </div>
                       <div className="pt-4 border-t border-border-main">
                         <p className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2">Why this works</p>
@@ -1944,19 +1961,46 @@ export default function App() {
                   activities.map((activity) => (
                     <div key={activity.id} className="glass-card p-4 rounded-2xl flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-glass-bg rounded-xl flex items-center justify-center text-xl">
-                          🏃‍♂️
+                        <div className="w-12 h-12 bg-glass-bg rounded-xl flex items-center justify-center text-xl overflow-hidden">
+                          {activity.type === 'run' && activity.path && activity.path.length > 0 ? (
+                            <svg viewBox="-5 -5 110 110" className="w-full h-full p-1">
+                              <polyline
+                                points={activity.path.map((p, i, arr) => {
+                                  const lats = arr.map(p => p.lat);
+                                  const lngs = arr.map(p => p.lng);
+                                  const minLat = Math.min(...lats);
+                                  const maxLat = Math.max(...lats);
+                                  const minLng = Math.min(...lngs);
+                                  const maxLng = Math.max(...lngs);
+                                  const rangeLat = Math.max(maxLat - minLat, 0.0001);
+                                  const rangeLng = Math.max(maxLng - minLng, 0.0001);
+                                  const x = ((p.lng - minLng) / rangeLng) * 100;
+                                  const y = 100 - ((p.lat - minLat) / rangeLat) * 100;
+                                  return `${x},${y}`;
+                                }).join(' ')}
+                                fill="none"
+                                stroke="#CCFF00"
+                                strokeWidth="8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : (
+                            activity.type === 'run' ? '🏃‍♂️' : '🥗'
+                          )}
                         </div>
                         <div>
-                          <p className="font-bold">Morning Run</p>
+                          <p className="font-bold">{activity.type === 'run' ? 'Morning Run' : 'Meal Logged'}</p>
                           <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">
-                            {format(new Date(activity.timestamp), 'MMM d, h:mm a')} · {activity.distance.toFixed(2)} km
+                            {format(new Date(activity.timestamp), 'MMM d, h:mm a')} {activity.type === 'run' && `· ${activity.distance.toFixed(2)} km`}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-black text-brand-primary">{activity.calories.toFixed(0)} kcal</p>
-                        <p className="text-[10px] font-bold text-text-muted uppercase">{Math.floor(activity.time / 60)}m {activity.time % 60}s</p>
+                        {activity.type === 'run' && (
+                          <p className="text-[10px] font-bold text-text-muted uppercase">{Math.floor(activity.time / 60)}m {activity.time % 60}s</p>
+                        )}
                       </div>
                     </div>
                   ))
@@ -2046,7 +2090,7 @@ export default function App() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex flex-col h-[calc(100vh-180px)] pt-4"
+              className="flex flex-col pt-4"
             >
               <div className="space-y-1 mb-6">
                 <h2 className="text-2xl md:text-3xl font-black">run tracker 👟</h2>
@@ -2056,6 +2100,66 @@ export default function App() {
                 userWeight={user?.weight || 70} 
                 uid={firebaseUser?.uid || ''}
               />
+
+              {/* Run History */}
+              <div className="mt-8 space-y-4 pb-20">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-lg font-bold">run history</h3>
+                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                    {activities.filter(a => a.type === 'run').length} total runs
+                  </p>
+                </div>
+                {activities.filter(a => a.type === 'run').length === 0 ? (
+                  <div className="text-center py-8 glass-card rounded-[2rem] border-dashed border-2 border-border-main">
+                    <p className="text-text-muted font-bold text-sm">no runs recorded yet 👟</p>
+                  </div>
+                ) : (
+                  activities.filter(a => a.type === 'run').map((activity) => (
+                    <div key={activity.id} className="glass-card p-4 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-glass-bg rounded-xl flex items-center justify-center overflow-hidden">
+                          {activity.path && activity.path.length > 0 ? (
+                            <svg viewBox="-5 -5 110 110" className="w-full h-full p-1">
+                              <polyline
+                                points={activity.path.map((p, i, arr) => {
+                                  const lats = arr.map(p => p.lat);
+                                  const lngs = arr.map(p => p.lng);
+                                  const minLat = Math.min(...lats);
+                                  const maxLat = Math.max(...lats);
+                                  const minLng = Math.min(...lngs);
+                                  const maxLng = Math.max(...lngs);
+                                  const rangeLat = Math.max(maxLat - minLat, 0.0001);
+                                  const rangeLng = Math.max(maxLng - minLng, 0.0001);
+                                  const x = ((p.lng - minLng) / rangeLng) * 100;
+                                  const y = 100 - ((p.lat - minLat) / rangeLat) * 100;
+                                  return `${x},${y}`;
+                                }).join(' ')}
+                                fill="none"
+                                stroke="#CCFF00"
+                                strokeWidth="8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : (
+                            <Footprints className="w-6 h-6 text-brand-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm">Run Session</p>
+                          <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">
+                            {format(new Date(activity.timestamp), 'MMM d, h:mm a')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-brand-primary text-sm">{activity.distance.toFixed(2)} km</p>
+                        <p className="text-[10px] font-bold text-text-muted uppercase">{Math.floor(activity.time / 60)}m {activity.time % 60}s</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </motion.div>
           )}
 
@@ -2473,6 +2577,11 @@ export default function App() {
                   <p className="text-lg font-black text-brand-secondary">{(selectedMeal.fats || 0).toFixed(1)}g</p>
                   <p className="text-[8px] text-text-muted uppercase font-black">Fat</p>
                 </div>
+                {selectedMeal.cost && (
+                  <div className="bg-glass-bg p-3 rounded-2xl text-center border border-border-main col-span-4">
+                    <p className="text-sm font-black text-brand-primary">Estimated Cost: {selectedMeal.cost}</p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -2704,13 +2813,23 @@ function MacroBar({ label, current, target, color, unit }: { label: string; curr
   );
 }
 
-function PlanItem({ label, dish, kcal }: { label: string, dish: string, kcal: number }) {
+function PlanItem({ label, meal, onClick }: { label: string, meal: MealAnalysis, onClick: () => void }) {
   return (
-    <div className="bg-glass-bg p-4 rounded-3xl border border-border-main">
-      <p className="text-[8px] font-black uppercase tracking-widest text-text-muted mb-1">{label}</p>
-      <p className="text-xs font-bold truncate mb-1">{dish}</p>
-      <p className="text-[10px] font-black text-brand-primary">{kcal} kcal</p>
-    </div>
+    <button 
+      onClick={onClick}
+      className="bg-glass-bg p-4 rounded-3xl border border-border-main text-left hover:bg-white/5 transition-colors w-full group"
+    >
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[8px] font-black uppercase tracking-widest text-text-muted">{label}</p>
+        <ChevronRight className="w-3 h-3 text-text-muted group-hover:text-brand-primary transition-colors" />
+      </div>
+      <p className="text-xs font-bold truncate mb-1">{meal.mealName}</p>
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] font-black text-brand-primary">{meal.calories} kcal</p>
+        <span className="text-[8px] text-text-muted">•</span>
+        <p className="text-[10px] font-black text-brand-accent">{meal.protein}g protein</p>
+      </div>
+    </button>
   );
 }
 

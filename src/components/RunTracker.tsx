@@ -178,14 +178,25 @@ export default function RunTracker({ userWeight, uid, onActivitySaved }: { userW
   };
 
   const handleStop = async () => {
-    const caloriesBurned = distance * userWeight * 1.036;
+    if (distance < 0.01) { // Don't save very short runs
+        setIsTracking(false);
+        setIsPaused(false);
+        setPath([]);
+        setDistance(0);
+        setElapsedTime(0);
+        setSpeed(0);
+        return;
+    }
+
+    const calories = distance * userWeight * 1.036;
     const activity = {
         type: 'run',
         distance,
         time: elapsedTime,
-        caloriesBurned,
+        calories,
         timestamp: Date.now(),
-        uid
+        uid,
+        path: path // Save the path coordinates
     };
     
     try {
@@ -215,7 +226,7 @@ export default function RunTracker({ userWeight, uid, onActivitySaved }: { userW
   const calories = distance * userWeight * 1.036;
 
   return (
-    <div className="flex flex-col h-full space-y-4 overflow-y-auto no-scrollbar pb-20">
+    <div className="flex flex-col space-y-4 pb-4">
       <div className="flex-shrink-0 w-full aspect-square sm:aspect-video rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden glass-card relative min-h-[300px]">
         {!(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || (window as any).GOOGLE_MAPS_API_KEY || (typeof process !== 'undefined' ? process.env.VITE_GOOGLE_MAPS_API_KEY : "")) ? (
           <div className="w-full h-full flex flex-col items-center justify-center bg-glass-bg p-8 text-center">
